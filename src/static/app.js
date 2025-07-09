@@ -3,15 +3,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const categoryFilter = document.getElementById("category-filter");
+  const sortFilter = document.getElementById("sort-filter");
+  const searchBox = document.getElementById("search-box");
+
+  // Helper to build query string from filters
+  function buildQuery() {
+    const params = [];
+    if (categoryFilter && categoryFilter.value) {
+      params.push(`category=${encodeURIComponent(categoryFilter.value)}`);
+    }
+    if (sortFilter && sortFilter.value) {
+      params.push(`sort=${encodeURIComponent(sortFilter.value)}`);
+    }
+    if (searchBox && searchBox.value.trim()) {
+      params.push(`search=${encodeURIComponent(searchBox.value.trim())}`);
+    }
+    return params.length ? `?${params.join("&")}` : "";
+  }
 
   // Function to fetch activities from API
   async function fetchActivities() {
     try {
-      const response = await fetch("/activities");
+      const response = await fetch(`/activities${buildQuery()}`);
       const activities = await response.json();
 
-      // Clear loading message
+      // Clear loading message and dropdown
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -40,6 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
+          <p><strong>Category:</strong> ${details.category || "N/A"}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
           <div class="participants-container">
@@ -153,6 +173,15 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
     }
+  });
+
+  // Add event listeners for filters
+  if (categoryFilter) categoryFilter.addEventListener("change", fetchActivities);
+  if (sortFilter) sortFilter.addEventListener("change", fetchActivities);
+  if (searchBox) searchBox.addEventListener("input", () => {
+    // Debounce search
+    clearTimeout(searchBox._debounce);
+    searchBox._debounce = setTimeout(fetchActivities, 300);
   });
 
   // Initialize app
